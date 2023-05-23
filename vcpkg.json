@@ -1,0 +1,8 @@
+{
+  "name": "project",
+  "version-string": "1",
+  "dependencies": [
+    "rsm-binary-io",
+    "rsm-bsa"
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "version": 4,
+  "configurePresets": [
+    {
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": {
+          "type": "BOOL",
+          "value": "ON"
+        }
+      },
+      "errors": {
+        "deprecated": true
+      },
+      "hidden": true,
+      "name": "cmake-dev",
+      "warnings": {
+        "deprecated": true,
+        "dev": true
+      }
+    },
+    {
+      "hidden": true,
+      "name": "vcpkg",
+      "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+    },
+    {
+      "cacheVariables": {
+        "VCPKG_TARGET_TRIPLET": {
+          "type": "STRING",
+          "value": "x64-windows-static"
+        }
+      },
+      "hidden": true,
+      "name": "windows"
+    },
+    {
+      "cacheVariables": {
+        "CMAKE_CXX_FLAGS": {
+          "type": "string",
+          "value": "/EHsc /MP /W4 /WX /external:anglebrackets /external:W0"
+        },
+        "CMAKE_MSVC_RUNTIME_LIBRARY": {
+          "type": "STRING",
+          "value": "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+        }
+      },
+      "hidden": true,
+      "name": "msvc"
+    },
+    {
+      "inherits": [
+        "cmake-dev",
+        "msvc",
+        "vcpkg",
+        "windows"
+      ],
+      "name": "windows-msvc-vcpkg"
+    }
+  ]
+}

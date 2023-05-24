@@ -6,7 +6,7 @@ import pathlib
 import typing
 
 import mobase
-from PyQt5.QtWidgets import QMessageBox
+from PyQt5.QtWidgets import QMainWindow, QMessageBox
 
 
 class ProxyPlugin:
@@ -48,6 +48,7 @@ class MyPlugin(mobase.IPlugin):
 
         self.__organizer = organizer
         self.__organizer.modList().onModInstalled(self.__onModInstalled)
+        self.__organizer.onUserInterfaceInitialized(self.__disableOldPlugin)
 
         self.__proxy = ProxyPlugin(self.__pluginPath())
 
@@ -60,7 +61,7 @@ class MyPlugin(mobase.IPlugin):
         return "Implements (correct) bsa archive extraction"
 
     def name(self) -> str:
-        return "BSA Extractor"
+        return "BSA Extractor 2"
 
     def settings(self) -> typing.List[mobase.PluginSetting]:
         return []
@@ -68,6 +69,9 @@ class MyPlugin(mobase.IPlugin):
     def version(self) -> mobase.VersionInfo:
         with open(f"{self.__pluginPath()}/version.txt") as f:
             return mobase.VersionInfo(f.read().strip(), mobase.VersionScheme.REGULAR)
+
+    def __disableOldPlugin(self, window: QMainWindow) -> None:
+        self.__organizer.setPersistent("BSA Extractor", "enabled", False)
 
     def __pluginPath(self) -> str:
         return f"{self.__organizer.basePath()}/plugins/bsa_extractor"

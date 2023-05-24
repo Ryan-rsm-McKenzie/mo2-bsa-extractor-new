@@ -6,7 +6,7 @@ import pathlib
 import typing
 
 import mobase
-from PyQt5.QtWidgets import QMessageBox, QProgressBar
+from PyQt5.QtWidgets import QMessageBox
 
 
 class ProxyPlugin:

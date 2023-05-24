@@ -11,9 +11,7 @@ from PyQt5.QtWidgets import QMessageBox
 
 class ProxyPlugin:
     def __init__(self, base_path: str) -> None:
-        self.__proxy = ctypes.cdll.LoadLibrary(
-            f"{base_path}/plugins/bsa_extractor/proxy.dll"
-        )
+        self.__proxy = ctypes.cdll.LoadLibrary(f"{base_path}/proxy.dll")
 
         extract_archive = self.__proxy.extract_archive
         extract_archive.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
@@ -51,7 +49,7 @@ class MyPlugin(mobase.IPlugin):
         self.__organizer = organizer
         self.__organizer.modList().onModInstalled(self.__onModInstalled)
 
-        self.__proxy = ProxyPlugin(self.__organizer.basePath())
+        self.__proxy = ProxyPlugin(self.__pluginPath())
 
         return True
 
@@ -68,10 +66,11 @@ class MyPlugin(mobase.IPlugin):
         return []
 
     def version(self) -> mobase.VersionInfo:
-        with open(
-            f"{self.__organizer.basePath()}/plugins/bsa_extractor/version.txt"
-        ) as f:
+        with open(f"{self.__pluginPath()}/version.txt") as f:
             return mobase.VersionInfo(f.read().strip(), mobase.VersionScheme.REGULAR)
+
+    def __pluginPath(self) -> str:
+        return f"{self.__organizer.basePath()}/plugins/bsa_extractor"
 
     def __onModInstalled(self, mod: mobase.IModInterface) -> None:
         archive_format = self.__archiveFormat()

@@ -11,7 +11,9 @@ from PyQt5.QtWidgets import QMessageBox
 
 class ProxyPlugin:
     def __init__(self, base_path: str) -> None:
-        self.__proxy = ctypes.cdll.LoadLibrary(f"{base_path}/plugins/bsa_extractor.dll")
+        self.__proxy = ctypes.cdll.LoadLibrary(
+            f"{base_path}/plugins/bsa_extractor/proxy.dll"
+        )
 
         extract_archive = self.__proxy.extract_archive
         extract_archive.argtypes = [ctypes.c_char_p, ctypes.c_char_p]

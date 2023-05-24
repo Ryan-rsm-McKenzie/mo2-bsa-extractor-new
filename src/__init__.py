@@ -68,7 +68,10 @@ class MyPlugin(mobase.IPlugin):
         return []
 
     def version(self) -> mobase.VersionInfo:
-        return mobase.VersionInfo(1, 0, 0)
+        with open(
+            f"{self.__organizer.basePath()}/plugins/bsa_extractor/version.txt"
+        ) as f:
+            return mobase.VersionInfo(f.read().strip(), mobase.VersionScheme.REGULAR)
 
     def __onModInstalled(self, mod: mobase.IModInterface) -> None:
         archive_format = self.__archiveFormat()

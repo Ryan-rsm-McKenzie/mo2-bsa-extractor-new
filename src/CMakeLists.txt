@@ -40,3 +40,18 @@ target_link_libraries(
 		binary_io::binary_io
 		bsa::bsa
 )
+
+configure_file(
+	"${ROOT_DIR}/data/version.txt.in"
+	"${CMAKE_CURRENT_BINARY_DIR}/version.txt"
+	@ONLY
+)
+
+install(
+	FILES
+		"$<TARGET_FILE:${PROJECT_NAME}>"
+		"${SOURCE_DIR}/__init__.py"
+		"${CMAKE_CURRENT_BINARY_DIR}/version.txt"
+	DESTINATION "plugins/bsa_extractor/"
+	COMPONENT "main"
+)

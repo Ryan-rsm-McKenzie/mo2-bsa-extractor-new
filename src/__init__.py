@@ -6,7 +6,7 @@ import pathlib
 import typing
 
 import mobase
-from PyQt5.QtWidgets import QMainWindow, QMessageBox
+from PyQt5.QtWidgets import QMainWindow, QMessageBox, qApp
 
 
 class ProxyPlugin:
@@ -74,7 +74,7 @@ class MyPlugin(mobase.IPlugin):
         self.__organizer.setPersistent("BSA Extractor", "enabled", False)
 
     def __pluginPath(self) -> str:
-        return f"{self.__organizer.basePath()}/plugins/bsa_extractor"
+        return f"{qApp.applicationDirPath()}/plugins/bsa_extractor"
 
     def __onModInstalled(self, mod: mobase.IModInterface) -> None:
         archive_format = self.__archiveFormat()

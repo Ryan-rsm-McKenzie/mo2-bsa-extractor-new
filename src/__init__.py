@@ -6,7 +6,15 @@ import pathlib
 import typing
 
 import mobase
-from PyQt5.QtWidgets import QMainWindow, QMessageBox, qApp
+from PyQt5.QtCore import QPoint, pyqtSignal
+from PyQt5.QtWidgets import (
+    QFileDialog,
+    QMainWindow,
+    QMenu,
+    QMessageBox,
+    QTreeWidget,
+    qApp,
+)
 
 
 class ProxyPlugin:
@@ -48,7 +56,7 @@ class MyPlugin(mobase.IPlugin):
 
         self.__organizer = organizer
         self.__organizer.modList().onModInstalled(self.__onModInstalled)
-        self.__organizer.onUserInterfaceInitialized(self.__disableOldPlugin)
+        self.__organizer.onUserInterfaceInitialized(self.__onUserInterfaceInitialized)
 
         self.__proxy = ProxyPlugin(self.__pluginPath())
 
@@ -70,8 +78,59 @@ class MyPlugin(mobase.IPlugin):
         with open(f"{self.__pluginPath()}/version.txt") as f:
             return mobase.VersionInfo(f.read().strip(), mobase.VersionScheme.REGULAR)
 
-    def __disableOldPlugin(self, window: QMainWindow) -> None:
+    def __onUserInterfaceInitialized(self, window: QMainWindow) -> None:
+        self.__window = window
+
+        # disable old bsa extractor plugin
         self.__organizer.setPersistent("BSA Extractor", "enabled", False)
+
+        self.__archive_tree: QTreeWidget = self.__window.findChild(QTreeWidget, "bsaList")  # type: ignore
+        signal: pyqtSignal = self.__archive_tree.customContextMenuRequested
+        signal.disconnect()  # disable old archive extraction dialogue
+        signal.connect(self.__onCustomContextMenuRequested)
+
+    def __onCustomContextMenuRequested(self, pos: QPoint) -> None:
+        def do_extraction() -> None:
+            item = self.__archive_tree.itemAt(pos)
+            destination = QFileDialog.getExistingDirectory(self.__window, "Extract BSA")
+
+            if next(pathlib.Path(destination).iterdir(), None) is not None:
+                choice = QMessageBox.question(
+                    None,
+                    "Extract Archives",
+                    (
+                        "The directory you have selected is not empty.\n"
+                        "Are you sure you wish to continue?"
+                    ),
+                    defaultButton=QMessageBox.No,
+                )
+                if choice != QMessageBox.Yes:
+                    return
+
+            if item.parent() is None:  # separator
+                mod_name = item.text(0)
+                archives = [item.child(i).text(0) for i in range(item.childCount())]
+            else:  # archive
+                mod_name = item.parent().text(0)
+                archives = [item.text(0)]
+
+            root_path = (
+                mod.absolutePath()
+                if (mod := self.__organizer.modList().getMod(mod_name)) is not None
+                else self.__organizer.managedGame().dataDirectory().absolutePath()
+            )
+
+            for archive in archives:
+                self.__logger.info(f"Extracting {archive}...")
+
+                if not self.__proxy.extract_archive(
+                    f"{root_path}/{archive}", destination
+                ):
+                    self.__logger.error(f"{archive}: {self.__proxy.get_last_error()}")
+
+        menu = QMenu()
+        menu.addAction("Extract...").triggered.connect(do_extraction)
+        menu.exec(self.__archive_tree.mapToGlobal(pos))
 
     def __pluginPath(self) -> str:
         return f"{qApp.applicationDirPath()}/plugins/bsa_extractor"

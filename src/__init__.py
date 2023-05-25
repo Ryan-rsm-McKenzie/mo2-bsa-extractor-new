@@ -93,6 +93,8 @@ class MyPlugin(mobase.IPlugin):
         def do_extraction() -> None:
             item = self.__archive_tree.itemAt(pos)
             destination = QFileDialog.getExistingDirectory(self.__window, "Extract BSA")
+            if len(destination) == 0:
+                return
 
             if next(pathlib.Path(destination).iterdir(), None) is not None:
                 choice = QMessageBox.question(

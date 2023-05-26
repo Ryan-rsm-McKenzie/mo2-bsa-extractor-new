@@ -50,6 +50,30 @@ class Archive:
     extraction_errors = False
 
 
+@dataclasses.dataclass
+class Setting:
+    key: str
+    description: str
+    default_value: mobase.MoVariant
+
+
+SETTINGS = {
+    x.key: x
+    for x in [
+        Setting(
+            "enable_install_dialogue",
+            "Enables the dialogue to unpack archives when installing them",
+            True,
+        ),
+        Setting(
+            "enable_archive_tab_context",
+            "Enables the context dialogue to unpack archives in the archives tab",
+            True,
+        ),
+    ]
+}
+
+
 class MyPlugin(mobase.IPlugin):
     def init(self, organizer: mobase.IOrganizer) -> bool:
         self.__logger: logging.Logger = mobase.logger  # type: ignore
@@ -59,6 +83,14 @@ class MyPlugin(mobase.IPlugin):
         self.__organizer.onUserInterfaceInitialized(self.__onUserInterfaceInitialized)
 
         self.__proxy = ProxyPlugin(self.__pluginPath())
+
+        self.__organizer.onPluginSettingChanged(self.__onPluginSettingChanged)
+        self.__settings: typing.Dict[str, mobase.MoVariant] = {}
+        for setting in SETTINGS.values():
+            value = self.__organizer.pluginSetting(self.name(), str(setting.key))
+            self.__settings[setting.key] = (
+                value if value is not None else setting.default_value
+            )
 
         return True
 
@@ -72,11 +104,26 @@ class MyPlugin(mobase.IPlugin):
         return "BSA Extractor 2"
 
     def settings(self) -> typing.List[mobase.PluginSetting]:
-        return []
+        return [
+            mobase.PluginSetting(x.key, x.description, x.default_value)
+            for x in SETTINGS.values()
+        ]
 
     def version(self) -> mobase.VersionInfo:
         with open(f"{self.__pluginPath()}/version.txt") as f:
             return mobase.VersionInfo(f.read().strip(), mobase.VersionScheme.REGULAR)
+
+    def __onPluginSettingChanged(
+        self,
+        plugin_name: str,
+        key: str,
+        old_value: mobase.MoVariant,
+        new_value: mobase.MoVariant,
+    ) -> None:
+        if plugin_name == self.name() and key in self.__settings:
+            self.__settings[key] = (
+                new_value if new_value is not None else SETTINGS[key].default_value
+            )
 
     def __onUserInterfaceInitialized(self, window: QMainWindow) -> None:
         self.__window = window
@@ -90,6 +137,9 @@ class MyPlugin(mobase.IPlugin):
         signal.connect(self.__onCustomContextMenuRequested)
 
     def __onCustomContextMenuRequested(self, pos: QPoint) -> None:
+        if not self.__settings["enable_archive_tab_context"]:
+            return
+
         def do_extraction() -> None:
             item = self.__archive_tree.itemAt(pos)
             destination = QFileDialog.getExistingDirectory(self.__window, "Extract BSA")
@@ -138,6 +188,9 @@ class MyPlugin(mobase.IPlugin):
         return f"{qApp.applicationDirPath()}/plugins/bsa_extractor"
 
     def __onModInstalled(self, mod: mobase.IModInterface) -> None:
+        if not self.__settings["enable_install_dialogue"]:
+            return
+
         archive_format = self.__archiveFormat()
         if mod.isForeign() or (archive_format is None):
             return

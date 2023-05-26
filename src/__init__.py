@@ -8,6 +8,7 @@ import typing
 import mobase
 from PyQt5.QtCore import QPoint, pyqtSignal
 from PyQt5.QtWidgets import (
+    QCheckBox,
     QFileDialog,
     QMainWindow,
     QMenu,
@@ -15,6 +16,8 @@ from PyQt5.QtWidgets import (
     QTreeWidget,
     qApp,
 )
+
+PLUGIN_NAME = "BSA Extractor 2"
 
 
 class ProxyPlugin:
@@ -57,6 +60,33 @@ class Setting:
     default_value: mobase.MoVariant
 
 
+class SettingProxy:
+    def __init__(self, organizer: mobase.IOrganizer, key: str) -> None:
+        self.__organizer = organizer
+        self.__key = key
+
+        self.__value = self.__organizer.pluginSetting(PLUGIN_NAME, self.__key)
+        self.__organizer.onPluginSettingChanged(self.__onPluginSettingChanged)
+
+    def __onPluginSettingChanged(
+        self,
+        plugin_name: str,
+        key: str,
+        old_value: mobase.MoVariant,
+        new_value: mobase.MoVariant,
+    ) -> None:
+        if plugin_name == PLUGIN_NAME and key == self.__key:
+            self.__value = new_value
+
+    @property
+    def value(self) -> mobase.MoVariant:
+        return self.__value
+
+    @value.setter
+    def value(self, __value: mobase.MoVariant) -> None:
+        self.__organizer.setPluginSetting(PLUGIN_NAME, self.__key, __value)
+
+
 SETTINGS = {
     x.key: x
     for x in [
@@ -83,14 +113,9 @@ class MyPlugin(mobase.IPlugin):
         self.__organizer.onUserInterfaceInitialized(self.__onUserInterfaceInitialized)
 
         self.__proxy = ProxyPlugin(self.__pluginPath())
-
-        self.__organizer.onPluginSettingChanged(self.__onPluginSettingChanged)
-        self.__settings: typing.Dict[str, mobase.MoVariant] = {}
-        for setting in SETTINGS.values():
-            value = self.__organizer.pluginSetting(self.name(), str(setting.key))
-            self.__settings[setting.key] = (
-                value if value is not None else setting.default_value
-            )
+        self.__settings = {
+            x: SettingProxy(self.__organizer, x) for x in SETTINGS.keys()
+        }
 
         return True
 
@@ -101,7 +126,7 @@ class MyPlugin(mobase.IPlugin):
         return "Implements (correct) bsa archive extraction"
 
     def name(self) -> str:
-        return "BSA Extractor 2"
+        return PLUGIN_NAME
 
     def settings(self) -> typing.List[mobase.PluginSetting]:
         return [
@@ -112,18 +137,6 @@ class MyPlugin(mobase.IPlugin):
     def version(self) -> mobase.VersionInfo:
         with open(f"{self.__pluginPath()}/version.txt") as f:
             return mobase.VersionInfo(f.read().strip(), mobase.VersionScheme.REGULAR)
-
-    def __onPluginSettingChanged(
-        self,
-        plugin_name: str,
-        key: str,
-        old_value: mobase.MoVariant,
-        new_value: mobase.MoVariant,
-    ) -> None:
-        if plugin_name == self.name() and key in self.__settings:
-            self.__settings[key] = (
-                new_value if new_value is not None else SETTINGS[key].default_value
-            )
 
     def __onUserInterfaceInitialized(self, window: QMainWindow) -> None:
         self.__window = window
@@ -137,7 +150,7 @@ class MyPlugin(mobase.IPlugin):
         signal.connect(self.__onCustomContextMenuRequested)
 
     def __onCustomContextMenuRequested(self, pos: QPoint) -> None:
-        if not self.__settings["enable_archive_tab_context"]:
+        if not self.__settings["enable_archive_tab_context"].value:
             return
 
         def do_extraction() -> None:
@@ -188,7 +201,7 @@ class MyPlugin(mobase.IPlugin):
         return f"{qApp.applicationDirPath()}/plugins/bsa_extractor"
 
     def __onModInstalled(self, mod: mobase.IModInterface) -> None:
-        if not self.__settings["enable_install_dialogue"]:
+        if not self.__settings["enable_install_dialogue"].value:
             return
 
         archive_format = self.__archiveFormat()
@@ -202,17 +215,25 @@ class MyPlugin(mobase.IPlugin):
         ]
 
         if len(archives) > 0:
-            do_extract = QMessageBox.question(
-                None,
-                "Extract Archives",
-                (
-                    "This mod contains one or more archives.\n"
-                    "Would you like to extract them?"
-                ),
-                defaultButton=QMessageBox.No,
+            do_extract = QMessageBox()
+            do_extract.setIcon(QMessageBox.Question)
+            do_extract.setWindowTitle("Extract Archives")
+            do_extract.setText(
+                "This mod contains one or more archives.\n"
+                "Would you like to extract them?"
             )
+            do_extract.addButton(QMessageBox.Yes)
+            do_extract.addButton(QMessageBox.No)
+            do_extract.setDefaultButton(QMessageBox.No)
 
-            if do_extract == QMessageBox.Yes:
+            never_ask = QCheckBox()
+            never_ask.setText("Do not ask me again")
+            do_extract.setCheckBox(never_ask)
+
+            do_extract.exec()
+            self.__settings["enable_install_dialogue"].value = not never_ask.isChecked()
+
+            if do_extract.clickedButton() == QMessageBox.Yes:
                 destination = mod.absolutePath()
                 for archive in archives:
                     self.__logger.info(

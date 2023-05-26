@@ -62,12 +62,12 @@ SETTINGS = {
     for x in [
         Setting(
             "enable_install_dialogue",
-            "Enables the dialogue to unpack archives when installing them",
+            "Enables the popup dialogue to unpack archives when installing them",
             True,
         ),
         Setting(
             "enable_archive_tab_context",
-            "Enables the context dialogue to unpack archives in the archives tab",
+            "Enables the context menu to unpack archives in the archives tab",
             True,
         ),
     ]

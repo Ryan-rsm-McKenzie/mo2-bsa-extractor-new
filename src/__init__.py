@@ -77,8 +77,8 @@ SETTINGS = {
 class MyPlugin(mobase.IPlugin):
     def init(self, organizer: mobase.IOrganizer) -> bool:
         self.__logger: logging.Logger = mobase.logger  # type: ignore
-
         self.__organizer = organizer
+
         self.__organizer.modList().onModInstalled(self.__onModInstalled)
         self.__organizer.onUserInterfaceInitialized(self.__onUserInterfaceInitialized)
 

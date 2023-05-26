@@ -60,12 +60,19 @@ class Setting:
     default_value: mobase.MoVariant
 
 
-class SettingProxy:
-    def __init__(self, organizer: mobase.IOrganizer, key: str) -> None:
+class SettingsCache:
+    def __init__(self, organizer: mobase.IOrganizer) -> None:
         self.__organizer = organizer
-        self.__key = key
+        self.__data: typing.Dict[str, mobase.MoVariant] = {
+            x.key: (
+                value
+                if (value := self.__organizer.pluginSetting(PLUGIN_NAME, x.key))
+                is not None
+                else x.default_value
+            )
+            for x in SETTINGS.values()
+        }
 
-        self.__value = self.__organizer.pluginSetting(PLUGIN_NAME, self.__key)
         self.__organizer.onPluginSettingChanged(self.__onPluginSettingChanged)
 
     def __onPluginSettingChanged(
@@ -75,16 +82,18 @@ class SettingProxy:
         old_value: mobase.MoVariant,
         new_value: mobase.MoVariant,
     ) -> None:
-        if plugin_name == PLUGIN_NAME and key == self.__key:
-            self.__value = new_value
+        if plugin_name == PLUGIN_NAME:
+            self.__data[key] = new_value
 
-    @property
-    def value(self) -> mobase.MoVariant:
-        return self.__value
+    def __getitem__(self, __key: str) -> mobase.MoVariant:
+        return self.__data[__key]
 
-    @value.setter
-    def value(self, __value: mobase.MoVariant) -> None:
-        self.__organizer.setPluginSetting(PLUGIN_NAME, self.__key, __value)
+    def __setitem__(
+        self,
+        __key: str,
+        __value: mobase.MoVariant,
+    ) -> None:
+        self.__organizer.setPluginSetting(PLUGIN_NAME, __key, __value)
 
 
 SETTINGS = {
@@ -113,9 +122,7 @@ class MyPlugin(mobase.IPlugin):
         self.__organizer.onUserInterfaceInitialized(self.__onUserInterfaceInitialized)
 
         self.__proxy = ProxyPlugin(self.__pluginPath())
-        self.__settings = {
-            x: SettingProxy(self.__organizer, x) for x in SETTINGS.keys()
-        }
+        self.__settings = SettingsCache(self.__organizer)
 
         return True
 
@@ -150,7 +157,7 @@ class MyPlugin(mobase.IPlugin):
         signal.connect(self.__onCustomContextMenuRequested)
 
     def __onCustomContextMenuRequested(self, pos: QPoint) -> None:
-        if not self.__settings["enable_archive_tab_context"].value:
+        if not self.__settings["enable_archive_tab_context"]:
             return
 
         def do_extraction() -> None:
@@ -201,7 +208,7 @@ class MyPlugin(mobase.IPlugin):
         return f"{qApp.applicationDirPath()}/plugins/bsa_extractor"
 
     def __onModInstalled(self, mod: mobase.IModInterface) -> None:
-        if not self.__settings["enable_install_dialogue"].value:
+        if not self.__settings["enable_install_dialogue"]:
             return
 
         archive_format = self.__archiveFormat()
@@ -231,7 +238,7 @@ class MyPlugin(mobase.IPlugin):
             do_extract.setCheckBox(never_ask)
 
             do_extract.exec()
-            self.__settings["enable_install_dialogue"].value = not never_ask.isChecked()
+            self.__settings["enable_install_dialogue"] = not never_ask.isChecked()
 
             if do_extract.clickedButton() == QMessageBox.Yes:
                 destination = mod.absolutePath()

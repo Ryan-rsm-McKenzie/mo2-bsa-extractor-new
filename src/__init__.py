@@ -229,7 +229,7 @@ class MyPlugin(mobase.IPlugin):
                 "This mod contains one or more archives.\n"
                 "Would you like to extract them?"
             )
-            do_extract.addButton(QMessageBox.Yes)
+            confirm_button = do_extract.addButton(QMessageBox.Yes)
             do_extract.addButton(QMessageBox.No)
             do_extract.setDefaultButton(QMessageBox.No)
 
@@ -240,7 +240,7 @@ class MyPlugin(mobase.IPlugin):
             do_extract.exec()
             self.__settings["enable_install_dialogue"] = not never_ask.isChecked()
 
-            if do_extract.clickedButton() == QMessageBox.Yes:
+            if do_extract.clickedButton() == confirm_button:
                 destination = mod.absolutePath()
                 for archive in archives:
                     self.__logger.info(

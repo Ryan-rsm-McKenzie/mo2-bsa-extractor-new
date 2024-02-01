@@ -2,19 +2,23 @@ import ctypes
 import dataclasses
 import enum
 import logging
+import os
 import pathlib
 import typing
 
 import mobase
-from PyQt5.QtCore import QPoint, pyqtSignal
-from PyQt5.QtWidgets import (
+from PyQt6.QtCore import (
+    QCoreApplication,
+    QPoint,
+    pyqtSignal
+)
+from PyQt6.QtWidgets import (
     QCheckBox,
     QFileDialog,
     QMainWindow,
     QMenu,
     QMessageBox,
     QTreeWidget,
-    qApp,
 )
 
 PLUGIN_NAME = "BSA Extractor 2"
@@ -174,9 +178,9 @@ class MyPlugin(mobase.IPlugin):
                         "The directory you have selected is not empty.\n"
                         "Are you sure you wish to continue?"
                     ),
-                    defaultButton=QMessageBox.No,
+                    defaultButton=QMessageBox.StandardButton.No,
                 )
-                if choice != QMessageBox.Yes:
+                if choice != QMessageBox.StandardButton.Yes:
                     return
 
             if item.parent() is None:  # separator
@@ -205,7 +209,7 @@ class MyPlugin(mobase.IPlugin):
         menu.exec(self.__archive_tree.mapToGlobal(pos))
 
     def __pluginPath(self) -> str:
-        return f"{qApp.applicationDirPath()}/plugins/bsa_extractor"
+        return os.path.join(QCoreApplication.applicationDirPath(), "plugins/bsa_extractor")
 
     def __onModInstalled(self, mod: mobase.IModInterface) -> None:
         if not self.__settings["enable_install_dialogue"]:
@@ -223,15 +227,15 @@ class MyPlugin(mobase.IPlugin):
 
         if len(archives) > 0:
             do_extract = QMessageBox()
-            do_extract.setIcon(QMessageBox.Question)
+            do_extract.setIcon(QMessageBox.Icon.Question)
             do_extract.setWindowTitle("Extract Archives")
             do_extract.setText(
                 "This mod contains one or more archives.\n"
                 "Would you like to extract them?"
             )
-            confirm_button = do_extract.addButton(QMessageBox.Yes)
-            do_extract.addButton(QMessageBox.No)
-            do_extract.setDefaultButton(QMessageBox.No)
+            confirm_button = do_extract.addButton(QMessageBox.StandardButton.Yes)
+            do_extract.addButton(QMessageBox.StandardButton.No)
+            do_extract.setDefaultButton(QMessageBox.StandardButton.No)
 
             never_ask = QCheckBox()
             never_ask.setText("Do not ask me again")
@@ -258,10 +262,10 @@ class MyPlugin(mobase.IPlugin):
                         None,
                         "Remove Archives",
                         "Now that extraction is complete, would you like to remove the old archives?",
-                        defaultButton=QMessageBox.Yes,
+                        defaultButton=QMessageBox.StandardButton.Yes,
                     )
 
-                    if do_remove == QMessageBox.Yes:
+                    if do_remove == QMessageBox.StandardButton.Yes:
                         for archive in archives:
                             if not archive.extraction_errors:
                                 archive.path.unlink()
